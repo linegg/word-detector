@@ -1,0 +1,19 @@
+{
+    "name": "linegg/word-detector",
+    "description": "This is a PHP package for detecting sensitive words and shielded words. It has comprehensive functions and is easy to use.",
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Linegg\\WordDetector\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "linegg",
+            "email": "linyzegg@163.com"
+        }
+    ],
+    "require": {
+        "php": ">=7.0"
+    }
+}

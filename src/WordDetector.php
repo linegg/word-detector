@@ -1,22 +1,58 @@
 <?php
-namespace WD;
-
 /**
  * WordDetector
  *
  * @author    yuanzhilin
  * @since     2021/11/29
- * @copyright 2021 IGG Inc.
  */
+namespace WD;
+
 class WordDetector
 {
-    public $wordsTree = [];
+    // trie
+    protected $wordsTree = [];
+    // will ignore invalidWord
+    protected $invalidWord = [' ','-'];
 
-    public function __construct(){
+    protected $replaceWord = '*';
 
+    public function setReplaceWord($w) {
+        $this->replaceWord = $w;
     }
 
-    public function buildTree($wordsList){
+    public function setInvalidWords(array $arr) {
+        $this->invalidWord = $arr;
+    }
+
+    public function getInvalidWords() : array{
+        return $this->invalidWord;
+    }
+
+    public function getWordsTree(): array{
+        return $this->wordsTree;
+    }
+
+    public function __construct(){
+        //nothing to do
+    }
+
+    public function buildTreeByFile(string $path) : bool{
+
+        if(!file_exists($path)){
+            return false;
+        }
+
+        $fp = fopen($path, 'r');
+        $tArr = [];
+        while(!feof($fp)){
+            $tArr[] = fgets($fp);
+        }
+
+        fclose($fp);
+        return $this->buildTree($tArr);
+    }
+
+    public function buildTree(array $wordsList) : bool{
         foreach($wordsList as $v0){
             $x = &$this->wordsTree;
 
@@ -29,40 +65,116 @@ class WordDetector
                 $x = &$x[$v1];
             }
         }
+
+        return true;
     }
 
-    public function search($str){
-        $strArr = str_split($str);
-        $strLen = mb_strlen($str);
-
-        foreach($strArr as $k => $v){
-
-            $wLen = $this->subSearch($str,$k);
-            echo $wLen;exit();
+    public function isIllegal($str): bool{
+        List($matchTimes) = $this->search($str, 1);
+        if (empty($matchTimes)) {
+            return false;
         }
+
+        return true;
     }
 
-    public function subSearch($str,$i): int{
-        $str = substr($str,$i);
-        $strArr = str_split($str);
+    /**
+     * search
+     *
+     * @param string  $str     raw string
+     * @param integer $limit   match number
+     * @param boolean $replace whether to replace
+     * @return array the result set
+     * */
+    public function search(string $str, int $limit = 0, bool $replace = false): array{
+        $len = strlen($str);
+        $matchWords = [];
+        $strWords = [];
+        $matchTimes = 0;
 
+        $replacedStr = $str;
+        // main loop,judge word by word
+        if (!empty($this->wordsTree)) {
+            for($i = 0;$i < $len;$i ++){
+                List($matchFlag, $wLen, $matchWord, $strWord, $replacePart) = $this->subSearch($str, $i);
+
+                if ($matchFlag) {
+                    if ($replace) {
+                        $replacedStr = substr_replace($replacedStr, $replacePart, $i, $wLen);
+                    }
+
+                    $i += ($wLen - 1);
+                    $matchTimes ++;
+                    $matchWords[] = $matchWord;
+                    $strWords[] = $strWord;
+                    if ($limit > 0 && $matchTimes >= $limit) {
+                        break;
+                    }
+                }
+            }
+        }
+
+        return [$matchTimes, $matchWords, $strWords, $replacedStr];
+    }
+
+    protected function subSearch($str, $i): array{
+        $str = substr($str, $i);
+
+        $strArr = str_split($str);
         $wLen = 0;
 
-        $p = &$this->wordsTree;
-        foreach($strArr as $k => $v){
-            $wLen ++;
+        $matchFlag = false;
 
-            // can not find first word
-            if(!isset($p[$v])){
-                break;
+        $p = &$this->wordsTree;
+        $swordTemp = '';
+        $strTemp = '';
+        // invalid word will not be replaced
+        $replace = '';
+
+        // string loop
+        foreach ($strArr as $k => $v) {
+            $strTemp .= $v;
+
+            if (in_array($v, $this->invalidWord)) {
+                $wLen ++;
+                $replace .= $v;
+                continue;
             }
 
-            if($p[$v] !== false){
-                $p = &$p[$v];
+            $case = function($arg) {
+                return $arg;
+            };
+
+            // can not find first word
+            // if it is a English characters
+            if (preg_match('/[a-zA-Z]/', $v)) {
+                if (isset($p[strtoupper($v)])) {
+                    $case = 'strtoupper';
+                } elseif (isset($p[strtolower($v)])) {
+                    $case = 'strtolower';
+                } else {
+                    break;
+                }
+            } else {
+                if (!isset($p[$v])) {
+                    break;
+                }
+            }
+
+            $replace .= $this->replaceWord;
+            $wLen ++;
+            $tv = call_user_func($case, $v);
+            $swordTemp .= $tv;
+
+            if ($p[$tv] !== false) {
+                $p = &$p[$tv];
+            } else {
+                $matchFlag = true;
+                break;
             }
         }
 
         // sensitive world's length
-        return $wLen;
+        return [$matchFlag, $wLen, $swordTemp, $strTemp, $replace];
     }
 }
