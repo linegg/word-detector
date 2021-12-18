@@ -1,7 +1,8 @@
 # word-detector - An easy-to-use vocabulary detection class for PHP
 
 ## Introduction
-Simple and easy to use sensitive word detection package, and supports ignoring English case.
+- Simple and easy to use sensitive word detection package, and supports ignoring English case.
+- PHP >= 7.0
 
 ## Installation
 ```sh
