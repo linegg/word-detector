@@ -5,7 +5,7 @@
  * @author    yuanzhilin
  * @since     2021/11/29
  */
-namespace WD;
+namespace Linegg\WordDetector;
 
 class WordDetector
 {
